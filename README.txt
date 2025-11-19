@@ -49,7 +49,7 @@ CREATE TABLE codigo_barras (
 );
 
 Archivo db.properties:
-db.url=jdbc:mysql://localhost:3306/tpi_programacion2
+db.url=jdbc:mysql://localhost:3306/tfi_bd
 db.user=tu_usuario
 db.password=tu_password
 
