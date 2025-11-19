@@ -3,20 +3,20 @@ package dao;
 import config.DatabaseConnection;
 import entities.CodigoBarras;
 import entities.TipoCodigo;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.IOException;
 
 public class CodigoBarrasDaoImpl implements GenericDao<CodigoBarras> {
-    private static final String INSERT_SQL = "INSERT INTO codigo_barras (producto_id, tipo, valor, fecha_asignacion, observaciones, eliminado) VALUES (?, ?, ?, ?, ?, false)";
+
+    private static final String INSERT_SQL =
+        "INSERT INTO codigo_barras (producto_id, tipo, valor, fecha_asignacion, observaciones, eliminado) VALUES (?, ?, ?, ?, ?, false)";
     private static final String SELECT_BY_ID_SQL = "SELECT * FROM codigo_barras WHERE id = ?";
     private static final String SELECT_ALL_SQL = "SELECT * FROM codigo_barras WHERE eliminado = false";
     private static final String UPDATE_SQL = "UPDATE codigo_barras SET tipo=?, valor=?, fecha_asignacion=?, observaciones=? WHERE id=?";
     private static final String DELETE_SQL = "UPDATE codigo_barras SET eliminado=true WHERE id=?";
 
-    // Métodos originales (compatibilidad)
     @Override
     public void crear(CodigoBarras cb) throws SQLException {
         try (Connection conn = DatabaseConnection.getConnection()) {
@@ -68,14 +68,14 @@ public class CodigoBarrasDaoImpl implements GenericDao<CodigoBarras> {
         }
     }
 
-    // ✅ Sobrecargas con Connection externa
+    // ✅ Método corregido con validación
     public void crear(CodigoBarras cb, Connection conn) throws SQLException {
+        if (cb.getProductoId() == null) {
+            throw new SQLException("producto_id no puede ser nulo. Debe asociar un producto antes de crear el código de barras.");
+        }
+
         try (PreparedStatement ps = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
-            if (cb.getProductoId() != null) {
-                ps.setLong(1, cb.getProductoId());
-            } else {
-                ps.setNull(1, Types.BIGINT);
-            }
+            ps.setLong(1, cb.getProductoId());
             ps.setString(2, cb.getTipo().name());
             ps.setString(3, cb.getValor());
             if (cb.getFechaAsignacion() != null) {
@@ -85,6 +85,7 @@ public class CodigoBarrasDaoImpl implements GenericDao<CodigoBarras> {
             }
             ps.setString(5, cb.getObservaciones());
             ps.executeUpdate();
+
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) {
                     cb.setId(rs.getLong(1));
