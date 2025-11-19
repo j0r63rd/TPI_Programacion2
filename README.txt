@@ -25,7 +25,7 @@ src/
 
 CONFIGURACIÓN DE LA BASE DE DATOS
 CREATE DATABASE tpi_programacion2;
-USE tpi_programacion2;
+USE tfi_bd;
 
 CREATE TABLE producto (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
