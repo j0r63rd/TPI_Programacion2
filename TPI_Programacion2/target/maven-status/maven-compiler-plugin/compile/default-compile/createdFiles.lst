@@ -1,0 +1,10 @@
+dao\GenericDao.class
+entities\CodigoBarras.class
+config\DatabaseConnection.class
+service\ProductoService.class
+com\mycompany\tpi_programacion2\TPI_Programacion2.class
+dao\ProductoDaoImpl.class
+entities\Producto.class
+main\AppTest.class
+dao\CodigoBarrasDaoImpl.class
+entities\TipoCodigo.class
