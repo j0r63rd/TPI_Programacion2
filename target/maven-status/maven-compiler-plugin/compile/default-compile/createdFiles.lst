@@ -6,5 +6,6 @@ com\mycompany\tpi_programacion2\TPI_Programacion2.class
 dao\ProductoDaoImpl.class
 entities\Producto.class
 main\AppTest.class
+service\CodigoBarrasService.class
 dao\CodigoBarrasDaoImpl.class
 entities\TipoCodigo.class
