@@ -9,3 +9,4 @@ main\AppTest.class
 service\CodigoBarrasService.class
 dao\CodigoBarrasDaoImpl.class
 entities\TipoCodigo.class
+main\AppMenu.class

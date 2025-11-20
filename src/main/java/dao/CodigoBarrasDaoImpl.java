@@ -3,44 +3,151 @@ package dao;
 import config.DatabaseConnection;
 import entities.CodigoBarras;
 import entities.TipoCodigo;
+
+import java.io.IOException;
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.IOException;
 
+// Asumimos que GenericDao<T> tiene al menos: crear(T), leer(long), leerTodos(), actualizar(T), eliminar(long)
 public class CodigoBarrasDaoImpl implements GenericDao<CodigoBarras> {
 
-    private static final String INSERT_SQL =
-        "INSERT INTO codigo_barras (producto_id, tipo, valor, fecha_asignacion, observaciones, eliminado) VALUES (?, ?, ?, ?, ?, false)";
-    private static final String SELECT_BY_ID_SQL = "SELECT * FROM codigo_barras WHERE id = ?";
+    // Consultas SQL optimizadas
+    private static final String SELECT_BY_VALOR_SQL = "SELECT * FROM codigo_barras WHERE valor = ? AND eliminado = false";
+    private static final String SELECT_BY_PRODUCTO_SQL = "SELECT * FROM codigo_barras WHERE producto_id = ? AND eliminado = false";
+    private static final String SELECT_BY_TIPO_SQL = "SELECT * FROM codigo_barras WHERE tipo = ? AND eliminado = false";
+    
+    // Consultas SQL del CRUD
+    private static final String INSERT_SQL = "INSERT INTO codigo_barras (producto_id, tipo, valor, fecha_asignacion, observaciones, eliminado) VALUES (?, ?, ?, ?, ?, ?)";
+    private static final String SELECT_BY_ID_SQL = "SELECT * FROM codigo_barras WHERE id = ? AND eliminado = false";
     private static final String SELECT_ALL_SQL = "SELECT * FROM codigo_barras WHERE eliminado = false";
-    private static final String UPDATE_SQL = "UPDATE codigo_barras SET tipo=?, valor=?, fecha_asignacion=?, observaciones=? WHERE id=?";
-    private static final String DELETE_SQL = "UPDATE codigo_barras SET eliminado=true WHERE id=?";
+    private static final String UPDATE_SQL = "UPDATE codigo_barras SET producto_id = ?, tipo = ?, valor = ?, fecha_asignacion = ?, observaciones = ?, eliminado = ? WHERE id = ?";
+    private static final String DELETE_SQL = "UPDATE codigo_barras SET eliminado = true WHERE id = ?"; // Baja lógica
 
+    // =======================================================
+    // MÉTODOS DE BÚSQUEDA OPTIMIZADA
+    // =======================================================
+
+    public CodigoBarras buscarPorValor(String valor) throws SQLException {
+        // ... (código interno igual, busca y mapea el ResultSet)
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_BY_VALOR_SQL)) {
+            
+            ps.setString(1, valor);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSet(rs);
+                }
+            }
+        } catch (IOException e) {
+            throw new SQLException("Error al obtener conexión para buscarPorValor", e);
+        }
+        return null;
+    }
+
+    public List<CodigoBarras> buscarPorProductoId(Long productoId) throws SQLException {
+        // ... (código interno igual, busca y mapea el ResultSet)
+        List<CodigoBarras> lista = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_BY_PRODUCTO_SQL)) {
+            
+            ps.setLong(1, productoId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapResultSet(rs));
+                }
+            }
+        } catch (IOException e) {
+            throw new SQLException("Error al obtener conexión para buscarPorProductoId", e);
+        }
+        return lista;
+    }
+
+    public List<CodigoBarras> buscarPorTipo(TipoCodigo tipo) throws SQLException {
+        // ... (código interno igual, busca y mapea el ResultSet)
+        List<CodigoBarras> lista = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_BY_TIPO_SQL)) {
+            
+            ps.setString(1, tipo.name()); // Guardamos el enum como String
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapResultSet(rs));
+                }
+            }
+        } catch (IOException e) {
+            throw new SQLException("Error al obtener conexión para buscarPorTipo", e);
+        }
+        return lista;
+    }
+
+    // =======================================================
+    // MÉTODOS CRUD ESTÁNDAR (IMPLEMENTAN INTERFACE)
+    // =======================================================
+    
     @Override
-    public void crear(CodigoBarras cb) throws SQLException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            crear(cb, conn);
+    public void crear(CodigoBarras entidad) throws SQLException {
+        crear(entidad, null); 
+    }
+
+    // Eliminamos @Override aquí, ya que la firma de la interfaz solo suele tener crear(T entidad)
+    public void crear(CodigoBarras entidad, Connection conn) throws SQLException {
+        boolean closeConn = (conn == null);
+        try {
+            if (closeConn) {
+                conn = DatabaseConnection.getConnection();
+            }
+            try (PreparedStatement ps = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setLong(1, entidad.getProductoId());
+                ps.setString(2, entidad.getTipo().name());
+                ps.setString(3, entidad.getValor());
+                ps.setDate(4, Date.valueOf(entidad.getFechaAsignacion()));
+                ps.setString(5, entidad.getObservaciones());
+                ps.setBoolean(6, entidad.getEliminado()); // 🚨 CORREGIDO: Usamos getEliminado()
+                ps.executeUpdate();
+
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        entidad.setId(rs.getLong(1));
+                    }
+                }
+            }
         } catch (IOException e) {
             throw new SQLException("Error al obtener conexión", e);
+        } finally {
+            if (closeConn && conn != null) {
+                conn.close();
+            }
         }
     }
 
     @Override
     public CodigoBarras leer(long id) throws SQLException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            return leer(id, conn);
+        // ... (código interno igual, busca y mapea el ResultSet)
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_BY_ID_SQL)) {
+            
+            ps.setLong(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSet(rs);
+                }
+            }
         } catch (IOException e) {
             throw new SQLException("Error al obtener conexión", e);
         }
+        return null;
     }
 
     @Override
     public List<CodigoBarras> leerTodos() throws SQLException {
+        // ... (código interno igual, busca y mapea el ResultSet)
         List<CodigoBarras> lista = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(SELECT_ALL_SQL);
              ResultSet rs = ps.executeQuery()) {
+            
             while (rs.next()) {
                 lista.add(mapResultSet(rs));
             }
@@ -51,93 +158,78 @@ public class CodigoBarrasDaoImpl implements GenericDao<CodigoBarras> {
     }
 
     @Override
-    public void actualizar(CodigoBarras cb) throws SQLException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            actualizar(cb, conn);
+    public void actualizar(CodigoBarras entidad) throws SQLException {
+        actualizar(entidad, null);
+    }
+    
+    // Eliminamos @Override aquí
+    public void actualizar(CodigoBarras entidad, Connection conn) throws SQLException {
+        boolean closeConn = (conn == null);
+        try {
+            if (closeConn) {
+                conn = DatabaseConnection.getConnection();
+            }
+            try (PreparedStatement ps = conn.prepareStatement(UPDATE_SQL)) {
+                ps.setLong(1, entidad.getProductoId());
+                ps.setString(2, entidad.getTipo().name());
+                ps.setString(3, entidad.getValor());
+                ps.setDate(4, Date.valueOf(entidad.getFechaAsignacion()));
+                ps.setString(5, entidad.getObservaciones());
+                ps.setBoolean(6, entidad.getEliminado()); // 🚨 CORREGIDO: Usamos getEliminado()
+                ps.setLong(7, entidad.getId());
+                ps.executeUpdate();
+            }
         } catch (IOException e) {
             throw new SQLException("Error al obtener conexión", e);
+        } finally {
+            if (closeConn && conn != null) {
+                conn.close();
+            }
         }
     }
 
     @Override
     public void eliminar(long id) throws SQLException {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            eliminar(id, conn);
+        eliminar(id, null);
+    }
+    
+    // Eliminamos @Override aquí
+    public void eliminar(long id, Connection conn) throws SQLException {
+        boolean closeConn = (conn == null);
+        try {
+            if (closeConn) {
+                conn = DatabaseConnection.getConnection();
+            }
+            try (PreparedStatement ps = conn.prepareStatement(DELETE_SQL)) {
+                ps.setLong(1, id);
+                ps.executeUpdate();
+            }
         } catch (IOException e) {
             throw new SQLException("Error al obtener conexión", e);
-        }
-    }
-
-    // ✅ Método corregido con validación
-    public void crear(CodigoBarras cb, Connection conn) throws SQLException {
-        if (cb.getProductoId() == null) {
-            throw new SQLException("producto_id no puede ser nulo. Debe asociar un producto antes de crear el código de barras.");
-        }
-
-        try (PreparedStatement ps = conn.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setLong(1, cb.getProductoId());
-            ps.setString(2, cb.getTipo().name());
-            ps.setString(3, cb.getValor());
-            if (cb.getFechaAsignacion() != null) {
-                ps.setDate(4, Date.valueOf(cb.getFechaAsignacion()));
-            } else {
-                ps.setNull(4, Types.DATE);
-            }
-            ps.setString(5, cb.getObservaciones());
-            ps.executeUpdate();
-
-            try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    cb.setId(rs.getLong(1));
-                }
+        } finally {
+            if (closeConn && conn != null) {
+                conn.close();
             }
         }
     }
 
-    public CodigoBarras leer(long id, Connection conn) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(SELECT_BY_ID_SQL)) {
-            ps.setLong(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSet(rs);
-                }
-            }
-        }
-        return null;
-    }
-
-    public void actualizar(CodigoBarras cb, Connection conn) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(UPDATE_SQL)) {
-            ps.setString(1, cb.getTipo().name());
-            ps.setString(2, cb.getValor());
-            if (cb.getFechaAsignacion() != null) {
-                ps.setDate(3, Date.valueOf(cb.getFechaAsignacion()));
-            } else {
-                ps.setNull(3, Types.DATE);
-            }
-            ps.setString(4, cb.getObservaciones());
-            ps.setLong(5, cb.getId());
-            ps.executeUpdate();
-        }
-    }
-
-    public void eliminar(long id, Connection conn) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(DELETE_SQL)) {
-            ps.setLong(1, id);
-            ps.executeUpdate();
-        }
-    }
-
+    // Método auxiliar de mapeo de resultados
     private CodigoBarras mapResultSet(ResultSet rs) throws SQLException {
         CodigoBarras cb = new CodigoBarras();
         cb.setId(rs.getLong("id"));
-        cb.setEliminado(rs.getBoolean("eliminado"));
+        cb.setProductoId(rs.getLong("producto_id"));
         cb.setTipo(TipoCodigo.valueOf(rs.getString("tipo")));
         cb.setValor(rs.getString("valor"));
-        Date sqlDate = rs.getDate("fecha_asignacion");
-        cb.setFechaAsignacion((sqlDate != null) ? sqlDate.toLocalDate() : null);
+        
+        Date fechaSQL = rs.getDate("fecha_asignacion");
+        if (fechaSQL != null) {
+            cb.setFechaAsignacion(fechaSQL.toLocalDate());
+        } else {
+            cb.setFechaAsignacion(null);
+        }
+        
         cb.setObservaciones(rs.getString("observaciones"));
-        cb.setProductoId(rs.getLong("producto_id"));
+        cb.setEliminado(rs.getBoolean("eliminado"));
         return cb;
     }
 }

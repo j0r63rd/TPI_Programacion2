@@ -8,13 +8,28 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
-        <exec.mainClass>com.mycompany.tpi_programacion2.TPI_Programacion2</exec.mainClass>
-    </properties>
-   <dependencies>
-    <dependency>
-        <groupId>com.mysql</groupId>
-        <artifactId>mysql-connector-j</artifactId>
-        <version>8.0.33</version>
-    </dependency>
-</dependencies>
-</project>
+        <exec.mainClass>main.AppMenu</exec.mainClass> </properties>
+    <dependencies>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.0.33</version>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <plugins>
+<plugin>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <version>3.1.0</version>
+    <configuration>
+        <mainClass>${exec.mainClass}</mainClass>
+        <executableArgs>
+            <executableArg>-Dfile.encoding=UTF-8</executableArg>
+        </executableArgs>
+        </configuration>
+</plugin>
+        </plugins>
+    </build>
+    </project>
