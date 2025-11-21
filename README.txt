@@ -136,3 +136,6 @@ ARQUITECTURA
 - dao: acceso a datos con PreparedStatement.
 - service: lógica de negocio y transacciones.
 - main: pruebas y menú.
+
+VIDEO DEMOSTRACIÓN 
+https://youtu.be/PsrlRXzB0O8
